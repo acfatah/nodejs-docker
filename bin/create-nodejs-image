@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+function usage() {
+    cat <<EOF
+Usage:
+    $(basename $0) VERSION [OPTION...] [ARGUMENTS...]
+
+    Build the nodejs image.
+
+Version:
+    Valid node image tag version. E.g: latest, 19.8, 19
+
+Options:
+    -h, --help      Show usage information.
+
+Arguments:
+    Arguments to pass to docker build command.
+EOF
+}
+
+HELP=0
+ARGUMENTS=()
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        -h|--help)
+        HELP=1
+        shift
+        ;;
+        *)
+        ARGUMENTS+=("$1")
+        shift
+        ;;
+    esac
+done
+set -- "${ARGUMENTS[@]}"
+
+if [[ $HELP -eq 1 ]]; then
+    usage
+    exit
+fi
+
+NODE_VERSION=${NODE_VERSION:-latest}
+USERID=${UID:-1000}
+GROUPID=${GID:-1000}
+
+docker build -t dockerized_node:$NODE_VERSION ${ARGUMENTS[@]} - <<EOF
+FROM node:$NODE_VERSION
+
+# To avoid permission issues, we should create files in a Node.js container
+# using the default user (node). We have to set the prefix to '/home/node'to
+# permission conflicts with the default root-owned directory.
+ENV NPM_PREFIX_PATH=/home/node
+
+RUN apt-get update && apt-get install -y \
+    libnss3 # required by puppeteer \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR /usr/src/app
+
+RUN userdel -f node && \
+  if getent group node ; then groupdel node; fi && \
+  groupadd -g $GROUPID node && \
+  useradd -l -u $USERID -g node node && \
+  install -d -m 0755 -o node -g node /home/node && \
+  chown --changes --silent --no-dereference --recursive \
+    $USERID:$GROUPID \
+    /home/node \
+    /usr/local/lib \
+    /usr/local/bin \
+    /usr/src/app
+
+USER node
+
+EXPOSE 3000
+EOF

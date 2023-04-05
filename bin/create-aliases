@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+alias node='$(dirname "${BASH_SOURCE[0]}")/nodejs-docker node'
+alias npm='$(dirname "${BASH_SOURCE[0]}")/nodejs-docker npm'
+alias npx='$(dirname "${BASH_SOURCE[0]}")/nodejs-docker npx'

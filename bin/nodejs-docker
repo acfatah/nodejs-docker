@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+function usage() {
+    cat <<EOF
+Usage:
+    $(basename $0) EXECUTABLE [OPTION...] [ARGUMENTS...]
+
+    Create a temporary container to run the nodej.js docker image.
+
+Executable:
+    Executable to run on the container. E.g: node, npm, npx, yarn or /bin/bash.
+
+Options:
+    -h, --help      Show usage information.
+
+Arguments:
+    Arguments to pass to the excutable.
+EOF
+}
+
+HELP=0
+ARGUMENTS=()
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        -h|--help)
+        HELP=1
+        shift
+        ;;
+        *)
+        ARGUMENTS+=("$1")
+        shift
+        ;;
+    esac
+done
+set -- "${ARGUMENTS[@]}"
+
+if [[ -z $1 || $HELP -eq 1 ]]; then
+    usage
+    exit
+fi
+
+NODE_VERSION=${NODE_VERSION:-latest}
+CONTAINER_NAME=${CONTAINER_NAME:-dockerized_node_${NODE_VERSION}-$(date +%s)}
+CONTAINER_PORT=${CONTAINER_PORT:-$(($RANDOM % 999 + 3000 ))}
+
+# To avoid permission issues, we should create files in a Node.js container
+# using the default user (node). We have to set the prefix to '/home/node'to
+# permission conflicts with the default root-owned directory.
+NPM_PREFIX_PATH=/home/node
+
+docker run -it --rm \
+    --name ${CONTAINER_NAME} \
+    -v ${VOLUME:-$PWD}:/usr/src/app \
+    -v node_${NODE_VERSION}_global_cache:/home/node \
+    -v node_${NODE_VERSION}_bins:/usr/local/bin \
+    -w /usr/src/app \
+    -p ${CONTAINER_PORT}:3000 \
+    -e NPM_PREFIX_PATH=$NPM_PREFIX_PATH \
+    dockerized_node:${NODE_VERSION} \
+    ${@}
