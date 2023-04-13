@@ -18,6 +18,11 @@ Arguments:
 EOF
 }
 
+if [[ -n $1 ]]; then
+  NODE_VERSION=$1
+  shift
+fi
+
 HELP=0
 ARGUMENTS=()
 while [[ $# -gt 0 ]]; do
@@ -44,6 +49,8 @@ fi
 NODE_VERSION=${NODE_VERSION:-latest}
 USERID=${UID:-1000}
 GROUPID=${GID:-1000}
+
+echo "Building dockerized_node:$NODE_VERSION..."
 
 docker build -t dockerized_node:$NODE_VERSION ${ARGUMENTS[@]} - <<EOF
 FROM node:$NODE_VERSION
