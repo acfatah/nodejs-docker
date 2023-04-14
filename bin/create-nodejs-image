@@ -18,6 +18,9 @@ Arguments:
 EOF
 }
 
+NODE_VERSION=$(env | grep ^NODE_VERSION | cut -d'=' -f2)
+[[ -z $NODE_VERSION ]] && NODE_VERSION=latest
+
 if [[ -n $1 ]]; then
   NODE_VERSION=$1
   shift
@@ -46,7 +49,6 @@ if [[ $HELP -eq 1 ]]; then
     exit
 fi
 
-NODE_VERSION=${NODE_VERSION:-latest}
 USERID=${UID:-1000}
 GROUPID=${GID:-1000}
 

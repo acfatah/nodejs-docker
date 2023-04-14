@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 function usage() {
     cat <<EOF
 Usage:
@@ -41,9 +43,21 @@ if [[ -z $1 || $HELP -eq 1 ]]; then
     exit
 fi
 
-NODE_VERSION=${NODE_VERSION:-latest}
+# Get the NODE_VERSION defined by the environment and use it.
+NODE_VERSION=$(env | grep ^NODE_VERSION | cut -d'=' -f2)
+[[ -z $NODE_VERSION ]] && NODE_VERSION=latest
+
+# To be able to run and access multiple Nodejs containers from the host, we
+# need to create the container with unique name and assign it to a random
+# port number.
 CONTAINER_NAME=${CONTAINER_NAME:-dockerized_node_${NODE_VERSION}-$(date +%s)}
 CONTAINER_PORT=${CONTAINER_PORT:-$(($RANDOM % 999 + 3000 ))}
+
+# Check the container existence. Build if not exists.
+if [[ "$(docker images -q dockerized_node:$NODE_VERSION 2> /dev/null)" == "" ]]; then
+    echo "dockerized_node:$NODE_VERSION image does not exist"
+    $(dirname "${BASH_SOURCE[0]}")/create-nodejs-image $NODE_VERSION
+fi
 
 # To avoid permission issues, we should create files in a Node.js container
 # using the default user (node). We have to set the prefix to '/home/node'to
